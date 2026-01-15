@@ -1,6 +1,4 @@
-const { accidents } = require('../models/accident.model');
-
-// POST /api/accidents
+const supabase = require('../utils/supabase');
 const formidable = require('formidable');
 const fs = require('fs');
 
@@ -24,48 +22,85 @@ exports.createAccident = async (req, res) => {
         try {
             // Read file from temporary path
             const imageBuffer = fs.readFileSync(imageFile.filepath);
-            const b64 = imageBuffer.toString('base64');
-            const mimetype = imageFile.mimetype || 'image/jpeg';
-            const dataURI = `data:${mimetype};base64,${b64}`;
+            const timestamp = new Date().getTime();
+            const filename = `accident_${timestamp}.jpg`;
 
-            // Extract fields (formidable puts them in arrays usually)
+            // 1. Upload to Supabase Storage
+            const { data: storageData, error: storageError } = await supabase
+                .storage
+                .from('accidents')
+                .upload(filename, imageBuffer, {
+                    contentType: imageFile.mimetype || 'image/jpeg',
+                    upsert: false
+                });
+
+            if (storageError) {
+                console.error('❌ Storage Upload Error:', storageError);
+                throw storageError;
+            }
+
+            // Get Public URL
+            const { data: publicUrlData } = supabase
+                .storage
+                .from('accidents')
+                .getPublicUrl(filename);
+
+            const imageUrl = publicUrlData.publicUrl;
+
+            // Extract fields
             const confidence = Array.isArray(fields.confidence) ? fields.confidence[0] : fields.confidence;
             const cameraId = Array.isArray(fields.cameraId) ? fields.cameraId[0] : fields.cameraId;
             const location = Array.isArray(fields.location) ? fields.location[0] : fields.location;
-            const timestamp = Array.isArray(fields.timestamp) ? fields.timestamp[0] : fields.timestamp;
+            const timeField = Array.isArray(fields.timestamp) ? fields.timestamp[0] : fields.timestamp;
 
             const newAccident = {
-                id: Date.now().toString(),
-                imageUrl: dataURI,
+                id: timestamp.toString(),
+                imageUrl: imageUrl, // URL from Supabase
                 confidence: parseFloat(confidence) || 0,
                 cameraId: cameraId || 'Unknown',
                 location: location || 'Unknown',
-                timestamp: timestamp || new Date().toISOString(),
+                timestamp: timeField || new Date().toISOString(),
                 createdAt: new Date().toISOString()
             };
 
-            accidents.unshift(newAccident);
-            if (accidents.length > 100) accidents.pop();
+            // 2. Insert into Supabase Table
+            const { data: dbData, error: dbError } = await supabase
+                .from('accidents')
+                .insert([newAccident])
+                .select();
 
-            console.log('✅ Accident processed via Formidable');
+            if (dbError) {
+                console.error('❌ Database Insert Error:', dbError);
+                throw dbError;
+            }
+
+            console.log('✅ Accident saved to Supabase:', newAccident.id);
             res.status(201).json({
                 status: 'ok',
-                message: 'Accident image received',
-                url: dataURI, // Alias for hardware side
+                message: 'Accident recorded successfully',
+                url: imageUrl,
                 ...newAccident
             });
+
         } catch (error) {
-            console.error('❌ Error processing file:', error);
-            res.status(500).json({ message: 'Error processing upload' });
+            console.error('❌ Error processing upload:', error);
+            res.status(500).json({ message: 'Error processing upload', error: error.message });
         }
     });
 };
 
 // GET /api/accidents
-exports.getAllAccidents = (req, res) => {
+exports.getAllAccidents = async (req, res) => {
     try {
-        console.log(`📡 GET request - Returning ${accidents.length} accidents`);
-        res.status(200).json(accidents);
+        const { data, error } = await supabase
+            .from('accidents')
+            .select('*')
+            .order('createdAt', { ascending: false });
+
+        if (error) throw error;
+
+        console.log(`📡 GET request - Returning ${data.length} accidents from Supabase`);
+        res.status(200).json(data);
     } catch (error) {
         console.error('Error fetching accidents:', error);
         res.status(500).json({ message: 'Internal server error' });
@@ -73,13 +108,22 @@ exports.getAllAccidents = (req, res) => {
 };
 
 // GET /api/accidents/:id
-exports.getAccidentById = (req, res) => {
+exports.getAccidentById = async (req, res) => {
     try {
-        const accident = accidents.find(a => a.id === req.params.id);
-        if (!accident) {
-            return res.status(404).json({ message: 'Accident not found' });
+        const { data, error } = await supabase
+            .from('accidents')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') { // Not found code
+                return res.status(404).json({ message: 'Accident not found' });
+            }
+            throw error;
         }
-        res.status(200).json(accident);
+
+        res.status(200).json(data);
     } catch (error) {
         console.error('Error fetching accident:', error);
         res.status(500).json({ message: 'Internal server error' });

@@ -1,8 +1,6 @@
-// In-memory store for accidents
-// Keeping it simple as per requirements (No database)
-
-const accidents = [];
+// This model is now deprecated in favor of Supabase
+// Keeping file to avoid breaking imports if any, but it's unused for storage.
 
 module.exports = {
-  accidents
+  accidents: [] // Empty array as placeholder
 };
