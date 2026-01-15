@@ -4,7 +4,8 @@ const accidentController = require('../controllers/accident.controller');
 const upload = require('../middlewares/upload.middleware');
 
 // POST /api/accidents
-router.post('/', accidentController.createAccident);
+// 'image' matches the key sent by the hardware script
+router.post('/', upload.single('image'), accidentController.createAccident);
 
 // GET /api/accidents
 router.get('/', accidentController.getAllAccidents);
