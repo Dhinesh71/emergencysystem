@@ -13,8 +13,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev')); // Logger
 
 // Static files (Uploads)
-// Serve uploads folder at /uploads URL path
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// NOT used in Vercel deployment (we use Base64 strings)
+// app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/accidents', accidentRoutes);

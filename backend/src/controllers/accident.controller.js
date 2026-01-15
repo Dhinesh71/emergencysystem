@@ -23,9 +23,13 @@ exports.createAccident = (req, res) => {
 
         const { confidence, cameraId, location, timestamp } = req.body;
 
+        // Convert buffer to base64
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
         const newAccident = {
             id: Date.now().toString(), // Simple ID generation
-            imageUrl: `/uploads/${req.file.filename}`, // URL to access the image
+            imageUrl: dataURI, // Store the actual image data
             confidence: parseFloat(confidence) || 0,
             cameraId: cameraId || 'Unknown',
             location: location || 'Unknown',

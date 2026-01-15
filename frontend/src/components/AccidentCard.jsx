@@ -17,7 +17,7 @@ const AccidentCard = ({ accident }) => {
         >
             <div className="relative h-48 bg-gray-900">
                 <img
-                    src={`http://localhost:4567${imageUrl}`}
+                    src={imageUrl}
                     alt="Accident Detection"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     onError={(e) => { e.target.src = 'https://via.placeholder.com/400x300?text=No+Image' }}

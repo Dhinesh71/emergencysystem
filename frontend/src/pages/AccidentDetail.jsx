@@ -51,7 +51,7 @@ const AccidentDetail = () => {
                         <div className="bg-surface rounded-lg p-2 border border-gray-700">
                             <div className="relative aspect-video bg-black rounded overflow-hidden">
                                 <img
-                                    src={`http://localhost:4567${accident.imageUrl}`}
+                                    src={accident.imageUrl}
                                     alt="Accident Full"
                                     className="w-full h-full object-contain"
                                 />
