@@ -48,7 +48,12 @@ exports.createAccident = async (req, res) => {
             if (accidents.length > 100) accidents.pop();
 
             console.log('✅ Accident processed via Formidable');
-            res.status(201).json(newAccident);
+            res.status(201).json({
+                status: 'ok',
+                message: 'Accident image received',
+                url: dataURI, // Alias for hardware side
+                ...newAccident
+            });
         } catch (error) {
             console.error('❌ Error processing file:', error);
             res.status(500).json({ message: 'Error processing upload' });
