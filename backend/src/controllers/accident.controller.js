@@ -7,16 +7,28 @@ exports.createAccident = async (req, res) => {
     const form = new formidable.IncomingForm();
 
     form.parse(req, async (err, fields, files) => {
+        console.log('🔍 [DEBUG] RAW Fields:', JSON.stringify(fields, null, 2));
+        console.log('🔍 [DEBUG] RAW Files keys:', Object.keys(files));
+
         if (err) {
             console.error('❌ Form parse error:', err);
             return res.status(500).json({ error: 'Form parse failed' });
         }
 
         // Handle case where files.image might be an array or single object
-        const imageFile = Array.isArray(files.image) ? files.image[0] : files.image;
+        // Also check if it came in as 'file' instead of 'image'
+        let imageFile = files.image || files.file;
+
+        if (Array.isArray(imageFile)) {
+            imageFile = imageFile[0];
+        }
 
         if (!imageFile) {
-            return res.status(400).json({ message: 'No image file received' });
+            console.error('❌ No image file found in request. keys received:', Object.keys(files));
+            return res.status(400).json({
+                message: 'No image file received',
+                receivedKeys: Object.keys(files)
+            });
         }
 
         try {
