@@ -27,12 +27,18 @@ exports.createAccident = async (req, res) => {
         const filename = `accident_${timestamp}.${originalExt}`;
 
         // 1. Upload to Supabase Storage
-        // req.file.buffer contains the file data in memory
+        // Force content type to image/jpeg if it comes in as unknown or text/plain
+        // The hardware script sends .jpg files, so this is safe.
+        let mimeType = imageFile.mimetype;
+        if (!mimeType || mimeType === 'text/plain' || mimeType === 'application/octet-stream') {
+            mimeType = 'image/jpeg';
+        }
+
         const { data: storageData, error: storageError } = await supabase
             .storage
             .from('accidents')
             .upload(filename, imageFile.buffer, {
-                contentType: imageFile.mimetype || 'image/jpeg',
+                contentType: mimeType,
                 upsert: false
             });
 
