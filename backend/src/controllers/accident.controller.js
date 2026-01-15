@@ -1,60 +1,59 @@
 const { accidents } = require('../models/accident.model');
 
 // POST /api/accidents
-exports.createAccident = (req, res) => {
-    console.log('\n========================================');
-    console.log('🚨 NEW ACCIDENT REPORT RECEIVED');
-    console.log('========================================');
-    console.log('⏰ Time:', new Date().toISOString());
-    console.log('📦 Request Body:', req.body);
-    console.log('📁 File Info:', req.file ? {
-        filename: req.file.filename,
-        originalname: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        path: req.file.path
-    } : 'NO FILE RECEIVED');
+const formidable = require('formidable');
+const fs = require('fs');
 
-    try {
-        if (!req.file) {
-            console.log('❌ ERROR: No image file in request');
-            return res.status(400).json({ message: 'Image file is required' });
+// POST /api/accidents
+exports.createAccident = async (req, res) => {
+    const form = new formidable.IncomingForm();
+
+    form.parse(req, async (err, fields, files) => {
+        if (err) {
+            console.error('❌ Form parse error:', err);
+            return res.status(500).json({ error: 'Form parse failed' });
         }
 
-        const { confidence, cameraId, location, timestamp } = req.body;
+        // Handle case where files.image might be an array or single object
+        const imageFile = Array.isArray(files.image) ? files.image[0] : files.image;
 
-        // Convert buffer to base64
-        const b64 = Buffer.from(req.file.buffer).toString('base64');
-        const dataURI = `data:${req.file.mimetype};base64,${b64}`;
-
-        const newAccident = {
-            id: Date.now().toString(), // Simple ID generation
-            imageUrl: dataURI, // Store the actual image data
-            confidence: parseFloat(confidence) || 0,
-            cameraId: cameraId || 'Unknown',
-            location: location || 'Unknown',
-            timestamp: timestamp || new Date().toISOString(),
-            createdAt: new Date().toISOString()
-        };
-
-        // Add to beginning of array (newest first)
-        accidents.unshift(newAccident);
-
-        // Keep only last 100 accidents to prevent memory overflow (optional safety)
-        if (accidents.length > 100) {
-            accidents.pop();
+        if (!imageFile) {
+            return res.status(400).json({ message: 'No image file received' });
         }
 
-        console.log('✅ Accident stored successfully!');
-        console.log('📊 Accident Data:', newAccident);
-        console.log('📈 Total accidents in memory:', accidents.length);
-        console.log('========================================\n');
+        try {
+            // Read file from temporary path
+            const imageBuffer = fs.readFileSync(imageFile.filepath);
+            const b64 = imageBuffer.toString('base64');
+            const mimetype = imageFile.mimetype || 'image/jpeg';
+            const dataURI = `data:${mimetype};base64,${b64}`;
 
-        res.status(201).json(newAccident);
-    } catch (error) {
-        console.error('❌ ERROR creating accident:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
+            // Extract fields (formidable puts them in arrays usually)
+            const confidence = Array.isArray(fields.confidence) ? fields.confidence[0] : fields.confidence;
+            const cameraId = Array.isArray(fields.cameraId) ? fields.cameraId[0] : fields.cameraId;
+            const location = Array.isArray(fields.location) ? fields.location[0] : fields.location;
+            const timestamp = Array.isArray(fields.timestamp) ? fields.timestamp[0] : fields.timestamp;
+
+            const newAccident = {
+                id: Date.now().toString(),
+                imageUrl: dataURI,
+                confidence: parseFloat(confidence) || 0,
+                cameraId: cameraId || 'Unknown',
+                location: location || 'Unknown',
+                timestamp: timestamp || new Date().toISOString(),
+                createdAt: new Date().toISOString()
+            };
+
+            accidents.unshift(newAccident);
+            if (accidents.length > 100) accidents.pop();
+
+            console.log('✅ Accident processed via Formidable');
+            res.status(201).json(newAccident);
+        } catch (error) {
+            console.error('❌ Error processing file:', error);
+            res.status(500).json({ message: 'Error processing upload' });
+        }
+    });
 };
 
 // GET /api/accidents

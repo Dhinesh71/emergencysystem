@@ -4,7 +4,7 @@ const accidentController = require('../controllers/accident.controller');
 const upload = require('../middlewares/upload.middleware');
 
 // POST /api/accidents
-router.post('/', upload.single('image'), accidentController.createAccident);
+router.post('/', accidentController.createAccident);
 
 // GET /api/accidents
 router.get('/', accidentController.getAllAccidents);
