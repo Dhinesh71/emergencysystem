@@ -5,11 +5,12 @@ const fs = require('fs');
 const PORT = process.env.PORT || 4567;
 
 // Ensure uploads directory exists on startup
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-    console.log('Created uploads directory');
-}
+// const uploadDir = path.join(__dirname, '../uploads');
+// if (!fs.existsSync(uploadDir)) {
+//     fs.mkdirSync(uploadDir, { recursive: true });
+//     console.log('Created uploads directory');
+// }
+const uploadDir = path.join(__dirname, '../uploads'); // Just for log variable
 
 app.listen(PORT, () => {
     console.log('\n╔════════════════════════════════════════════════════════╗');
